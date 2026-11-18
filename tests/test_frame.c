@@ -157,6 +157,51 @@ static void test_parse_stall_resync(void)
 	free(p);
 }
 
+/* A now-playing-sized frame (01, 47-byte payload) between two C3 pushes,
+ * delivered in notifications of every size from 1 byte to the whole stream.
+ * The payload is UTF-8 holding the bytes BB and CC, the two reply headers,
+ * so a resync on a header inside a partial frame would show up here as
+ * skipped bytes. Every split must give the same three frames and drop nothing. */
+static void test_parse_long_frame_every_split(void)
+{
+	static const char text[] = "Artist \xC2\xBB Title \xCC\x80 MK\xE2\x85\xA1";
+	uint8_t stream[7 + 6 + 47 + 7];
+	uint8_t *lf = stream + 7;
+	size_t total = sizeof(stream);
+	int bad_splits = 0;
+
+	memcpy(stream, seen_c3, 7);
+	lf[0] = 0xBB, lf[1] = 0xEC, lf[2] = 0x01, lf[3] = 0x00, lf[4] = 47;
+	memset(lf + 5, 'x', 47);
+	memcpy(lf + 5, text, sizeof(text) - 1);
+	lf[5 + 47] = ed_sum8(lf, 5 + 47);
+	memcpy(stream + 7 + 6 + 47, seen_c3, 7);
+
+	for (size_t chunk = 1; chunk <= total; chunk++) {
+		struct ed_parser *p = new_parser();
+		struct ed_frame f;
+		uint8_t cmds[4];
+		size_t got = 0;
+		bool payload_ok = false;
+
+		for (size_t off = 0; off < total; off += chunk) {
+			ed_parser_feed(p, stream + off, off + chunk > total ? total - off : chunk);
+			while (ed_parser_next(p, &f)) {
+				if (got < sizeof(cmds))
+					cmds[got] = f.cmd;
+				if (f.cmd == 0x01)
+					payload_ok = f.len == 47 && memcmp(f.payload, lf + 5, 47) == 0;
+				got++;
+			}
+		}
+		if (got != 3 || cmds[0] != 0xC3 || cmds[1] != 0x01 || cmds[2] != 0xC3 || !payload_ok ||
+		    p->skipped != 0 || p->bad_sum != 0)
+			bad_splits++;
+		free(p);
+	}
+	CHECK(bad_splits == 0);
+}
+
 void test_frame(void)
 {
 	test_checksum_and_build();
@@ -166,4 +211,5 @@ void test_frame(void)
 	test_parse_sizes();
 	test_parse_overflow();
 	test_parse_stall_resync();
+	test_parse_long_frame_every_split();
 }
