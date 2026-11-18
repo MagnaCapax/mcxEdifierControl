@@ -12,7 +12,9 @@
 
 static int no_reply(const struct ed_cmd *c, int r)
 {
-	if (r == 0)
+	if (r == 0 && ed_link_stop)
+		fprintf(stderr, "edifierctl: interrupted\n");
+	else if (r == 0)
 		fprintf(stderr, "edifierctl: no reply to %s (%02X %02X)\n", c->name, c->app, c->query);
 	return ed_session_close(ED_EXIT_FAIL);
 }

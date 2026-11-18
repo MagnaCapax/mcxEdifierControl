@@ -105,7 +105,10 @@ bool ed_parser_next(struct ed_parser *p, struct ed_frame *f)
 		if (p->used < total) {
 			/* Still incomplete. If a valid frame is already buffered behind it, the
 			 * header byte was garbage with a bogus length: skip to that frame
-			 * instead of waiting for up to 64 KiB that will never come. */
+			 * instead of waiting for up to 64 KiB that will never come. A real
+			 * partial frame whose payload happens to hold a checksum-valid frame
+			 * is lost this way; it is counted in skipped, and waiting forever
+			 * would lose every frame after it instead. */
 			size_t next = 1;
 
 			while (next < p->used && !valid_frame_at(p, next))

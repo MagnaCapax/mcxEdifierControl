@@ -261,9 +261,14 @@ static int open_channel(struct ed_link *l, struct survey *s, char *err, size_t e
 		int rc = ed_dbus_call_void(l->bus, l->device, "org.bluez.Device1", "Connect", CONNECT_MS,
 					   err, errcap);
 
-		/* AlreadyConnected: someone else made the link, so it is not ours to drop.
-		 * Any other outcome, a timeout included, may leave a link we started:
-		 * own it, so closing disconnects it (harmless if it never came up). */
+		/* A link someone else made or is making is not ours to drop. BlueZ answers
+		 * InProgress while another client's Connect is pending; on LE it returns
+		 * plain success if the link came up after our Connected check, which this
+		 * cannot tell apart (a narrow race). AlreadyConnected is the BR/EDR form.
+		 * Any other outcome, a timeout included, may leave a link we started: own
+		 * it, so closing disconnects it (harmless if it never came up). */
+		if (rc < 0 && ed_dbus_err_is(err, "InProgress"))
+			return -1;
 		if (rc < 0 && ed_dbus_err_is(err, "AlreadyConnected"))
 			rc = 0;
 		else
