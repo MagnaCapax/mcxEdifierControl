@@ -2,7 +2,7 @@
 
 `edifierctl` is a small command-line tool that talks to an **Edifier R2750DB MKII** powered speaker over Bluetooth LE from Linux. It is meant for the speaker's own master volume, input source and ECO mode, and for watching what the speaker reports. One C binary that depends directly only on libc and libdbus, with BlueZ doing the radio work.
 
-> **Status: unverified on hardware.** The frame format and the BLE layout are confirmed on a real unit, but the speaker has not yet answered a query. Every command layout comes from analysis of the official app and is untested. The [verification table](#verification-status) shows the state per command.
+> **Status: partly verified on hardware.** On one R2750DB MKII (firmware 2.5.1) the speaker answered 12 of the 15 queries and `volume` set and read back its value. Every other set command still comes from analysis of the official app and is untested. The [verification table](#verification-status) shows the state per command.
 
 ## Why this exists
 
@@ -13,6 +13,7 @@ The R2750DB MKII has no absolute volume over Bluetooth: its manual says "Volume 
 - Linux with BlueZ running (`bluetoothd`), on any distribution: CI builds and tests on Ubuntu (gcc and clang), Debian 12 and Alpine (musl).
 - BlueZ's GATT client must offer `AcquireNotify` and `AcquireWrite`. They were added in BlueZ 5.46, first as experimental; the current BlueZ documentation lists them without that tag.
 - A Bluetooth adapter with LE support, powered on.
+- Run on hardware on Ubuntu 26.04 with BlueZ 5.85 (2026-11-18). The other distributions are built and unit-tested in CI only.
 - Only the R2750DB MKII is described. Other Edifier devices use the same frame family, but their commands are not in this tool and it does not claim to work with them.
 
 ## Install
@@ -74,18 +75,20 @@ Speaker frames `01` and `02` carry the title and artist of what is playing. Fram
 
 ## Verification status
 
-What is confirmed on a real R2750DB MKII:
+Tested with `edifierctl` on one R2750DB MKII, firmware 2.5.1, BlueZ 5.85, on 2026-11-18. Audio was playing during every run; whether the speaker also answers with audio idle is not tested yet.
 
 | Item | Status |
 |---|---|
 | Advertisement (`EDIFIER BLE`, UUID `0x2C03`, manufacturer data) | verified on the unit |
 | GATT layout (control service, RX notify, TX write) | verified on the unit |
-| Frame format and checksum | verified on the unit, from frames the speaker sent |
-| `a2dp` push (`C3`) | verified on the unit (pushed; not yet as a reply) |
-| `01` / `02` pushes | seen on the unit (pushed) |
+| Frame format and checksum | verified on the unit |
+| `volume` read (`66`) and set (`67`), relative and absolute | verified on the unit: read, set one step down, set back, read back |
+| Queries `caps volume input eco timer multipoint eq sound firmware mac name a2dp` | verified on the unit: each answered |
+| Queries `autooff ldac subout` | no reply on the unit (firmware 2.5.1) |
+| Sets `input eco autooff timer timer-cancel ldac multipoint eq sound subout` | **derived from the app, not verified on hardware** |
+| Pushes `C3` (A2DP state), `66` (after a volume set), `01` / `02` (now playing) | seen on the unit |
 
-Every command, `caps volume input eco autooff timer timer-cancel ldac multipoint eq sound subout firmware mac name a2dp` as a query or a set: **derived from the app, not yet verified on hardware.** A command moves to the table above only after it is verified on the speaker.
-
+A set command moves to "verified" only after it is verified on the speaker.
 [PROTOCOL.md](docs/PROTOCOL.md) describes the frames, the command table with its sources, what has been observed and the prior art.
 
 ## How it works

@@ -1,6 +1,6 @@
 /* The R2750DB MKII command table, the send gate and the volume rule.
- * Command layouts come from analysis of the official app and are NOT yet
- * verified on hardware unless docs/PROTOCOL.md says so. */
+ * Command layouts come from analysis of the official app. Only those that
+ * docs/PROTOCOL.md marks as answered or verified on the unit are confirmed. */
 #include "model.h"
 
 #include <ctype.h>

@@ -22,7 +22,7 @@ Model number EDF100102. Each row names its source. "Unit" means observed on one 
 | Bluetooth hidden mode | after 10 min with no device connected | [Quick Start Guide][qsg] |
 | Absolute volume over Bluetooth | none: "Volume sync is not supported"; the AVRCP record offers no category 2 | [Quick Start Guide][qsg] §9 + unit |
 | Firmware update | over the air through the phone app; no PC update path found | [Quick Start Guide][qsg]; PC path not found |
-| Installed firmware version | unknown | — |
+| Installed firmware version | 2.5.1 on the unit observed (2026-11-18) | unit: `edifierctl get firmware` (`C6` reply) |
 
 ## Bluetooth chip
 
@@ -41,7 +41,7 @@ Model number EDF100102. Each row names its source. "Unit" means observed on one 
 
 ## Why a host-side tool
 
-With no absolute volume, the computer's volume slider only attenuates the digital signal before encoding (32 % on PipeWire is about −29.7 dB). The speaker's own master volume is reachable only by the knob, the remote, HDMI CEC or the phone app, and the ECO setting only by the remote or the app. `edifierctl` is meant to reach both from Linux over BLE, once the commands are verified on hardware.
+With no absolute volume, the computer's volume slider only attenuates the digital signal before encoding (32 % on PipeWire is about −29.7 dB). The speaker's own master volume is reachable only by the knob, the remote, HDMI CEC or the phone app, and the ECO setting only by the remote or the app. `edifierctl` reaches the master volume from Linux over BLE (verified on the unit) and reads the ECO setting; setting ECO from the tool is not verified yet ([PROTOCOL.md](PROTOCOL.md)).
 
 ## Regulatory
 

@@ -8,12 +8,12 @@ Independently written. Contains no Edifier app code, keys or catalog data; the p
 
 | Tag | Meaning |
 |---|---|
-| **unit** | Observed on one R2750DB MKII with BlueZ tools and a frame log. |
+| **unit** | Observed on one R2750DB MKII (firmware 2.5.1) with BlueZ tools, a frame log or `edifierctl`. |
 | **app** | Derived from static analysis of the official EDIFIER ConneX Android app, version 1.0.32. **Not verified on hardware.** |
 | **inference** | Reasoned, not proven. |
 | **unknown** | Not known. |
 
-A command loses its **app** tag only when that command has been verified on the speaker. As of this writing, **no command has been verified**: the speaker has not yet replied to any query (see [observed behaviour](#observed-behaviour)).
+A command loses its **app** tag only when that command has been verified on the speaker. On 2026-11-18 the speaker answered 12 of the 15 queries and the volume set; every other set is still **app** only (see [observed behaviour](#observed-behaviour)).
 
 ## Advertising and GATT layout
 
@@ -48,26 +48,26 @@ A parser must accept `BB` and `CC`, check `sum8`, reassemble frames split across
 
 ## Commands
 
-Which of these the R2750DB MKII implements is **unknown**: the app learns it at runtime from the `D8` reply, whose layout is not described here. Every row is **app**-tagged and unverified. `edifierctl` prints the `D8` reply as raw hex.
+The layouts come from the app (**app**). The last column is what the unit did with `edifierctl` on 2026-11-18, firmware 2.5.1, audio playing: **answered** means the speaker replied with that opcode and the reply had the size shown; **no reply** means it did not answer within the wait; **not tested** means the command was not sent. A set marked not tested is unverified. The app learns which features a model has from the `D8` reply, whose layout is not described here; `edifierctl` prints it as raw hex.
 
-| Name in `edifierctl` | Query → reply payload | Set → payload | Function |
-|---|---|---|---|
-| `volume` | `66` → `[max, current]` | `67` `[value]` | master volume |
-| `input` | `61` → `[group, source]` | `62` `[group, source]` | input source (source values come from the `D8` reply) |
-| `eco` | `B1` → `[0\|1]` | `B2` `[0\|1]` | ECO / power-saving mode |
-| `autooff` | `D7` → `[1 = on]` | `D6` `[value]` | auto power-off without audio |
-| `timer`, `timer-cancel` | `D3` → 16-bit big-endian | `D1` 16-bit, `D2` cancel | shutdown timer (unit unknown) |
-| `ldac` | `48` → `[v]` | `49` `[v]` | LDAC setting |
-| `multipoint` | `7C` → `[a, b]` or `[b]` | `7D` | multipoint |
-| `eq` | `D5` → `[eqIndex, 5-6 more bytes]` | `C4`: write back only bytes read with `D5`, changing eqIndex | EQ preset |
-| `sound` | `BB` → layout unknown | `BC` `[index, config]` | sound setting |
-| `subout` | app `ED`: `13` → `[index, value]` | app `ED`: `14` `[index, value]` | sub-out |
-| `firmware` | `C6` → bytes, shown joined with `.` | — | firmware version |
-| `mac` | `C8` → 6 bytes | — | address |
-| `name` | `C9` → UTF-8 | — | device name |
-| `a2dp` | `C3` → `[state]`, `0D` = playing | — | A2DP state; also pushed (unit) |
-| `caps` | `D8` → capability bits | — | supported features (raw hex) |
-| — | `01`, `02` pushed | — | now-playing title and artist (pushed, unit; meaning: inference) |
+| Name in `edifierctl` | Query → reply payload | Set → payload | Function | On the unit |
+|---|---|---|---|---|
+| `volume` | `66` → `[max, current]` | `67` `[value]` | master volume | query answered (2 bytes, max 50); set **verified**: one step down and back, each read back |
+| `input` | `61` → `[group, source]` | `62` `[group, source]` | input source (source values come from the `D8` reply) | query answered (2 bytes); set not tested |
+| `eco` | `B1` → `[0\|1]` | `B2` `[0\|1]` | ECO / power-saving mode | query answered (1 byte); set not tested |
+| `autooff` | `D7` → `[1 = on]` | `D6` `[value]` | auto power-off without audio | no reply; set not tested |
+| `timer`, `timer-cancel` | `D3` → 16-bit big-endian | `D1` 16-bit, `D2` cancel | shutdown timer (unit unknown) | query answered (2 bytes); sets not tested |
+| `ldac` | `48` → `[v]` | `49` `[v]` | LDAC setting | no reply; set not tested |
+| `multipoint` | `7C` → `[a, b]` or `[b]` | `7D` | multipoint | query answered (2 bytes); set not tested |
+| `eq` | `D5` → `[eqIndex, 5-6 more bytes]` | `C4`: write back only bytes read with `D5`, changing eqIndex | EQ preset | query answered with **1 byte**, not the length the app layout gives; set not tested |
+| `sound` | `BB` → layout unknown | `BC` `[index, config]` | sound setting | query answered (2 bytes); set not tested |
+| `subout` | app `ED`: `13` → `[index, value]` | app `ED`: `14` `[index, value]` | sub-out | no reply; set not tested |
+| `firmware` | `C6` → bytes, shown joined with `.` | — | firmware version | answered (3 bytes: 2.5.1) |
+| `mac` | `C8` → 6 bytes | — | address | answered (6 bytes, the classic Bluetooth address) |
+| `name` | `C9` → UTF-8 | — | device name | answered (`EDIFIER R2750DB MKⅡ`) |
+| `a2dp` | `C3` → `[state]`, `0D` = playing | — | A2DP state; also pushed | answered (1 byte, `0D` while playing); also pushed |
+| `caps` | `D8` → capability bits | — | supported features (raw hex) | answered (24 bytes) |
+| — | `01`, `02` pushed | — | now-playing title and artist | pushed (meaning: inference) |
 
 ### Destructive and forbidden opcodes
 
@@ -77,15 +77,27 @@ Which of these the R2750DB MKII implements is **unknown**: the app learns it at 
 
 ## Observed behaviour
 
-On the unit, up to 2026-11-18 (all **unit**):
+On the unit (all **unit**).
 
-- Writes to TX are accepted at the ATT level, both write and write without response.
-- Speaker frames have appeared only shortly after notifications were enabled, and only sometimes:
+**With `edifierctl` on 2026-11-18** (firmware 2.5.1, BlueZ 5.85, audio playing in every run):
+
+- The speaker answered queries: the 12 marked answered above, within one connection for `info`. `D7`, `48` and `ED 13` got no reply.
+- `volume -1` and then `volume 47` each read the volume, set it and read it back (47 → 46 → 47, max 50).
+- After each volume set the speaker also pushed a `66` frame with the new volume, and a `C3` frame.
+- During the `info` run it pushed `C3` many times and `02` / `01` (now playing) several times.
+- Sending `D8` first did not stop later queries from being answered.
+- Whether the speaker answers with audio idle is not tested.
+- The `info` run and the volume set runs each ended with 5 bytes the parser dropped, and the `info` run also with one frame rejected for a bad checksum. Where these bytes come from is not known yet.
+
+**Before that, with other tools** (BlueZ `bluetoothctl`-based, notifications through `StartNotify`, writes through `WriteValue`):
+
+- Writes to TX were accepted at the ATT level, both write and write without response.
+- Speaker frames appeared only shortly after notifications were enabled, and only sometimes:
   - `BB EC C3 00 01 0D 78` (A2DP state, playing) after six of the subscriptions (four of them during a test tone or real playback; the setting of the other two was not recorded);
   - `02` then `01`, ASCII payloads carrying the artist and title of the track playing, once, during real playback. That these are forwarded AVRCP metadata is an inference.
-  - no frame after the other subscriptions, including 15 of 19 probe rounds triggered by real playback and every session without audio. What decides whether a frame comes is unknown.
-- **No reply to any host query so far:** about ten manual sessions (idle, silence, playing, after a power cycle), `C9` and `C6` sent right after a `C3` push, and 19 automatic rounds of `D8 66 61 C6 B1` and `ED 13` sent right after subscribing during playback.
-- The earlier idea that the speaker answers only while it plays real audio does not hold: it pushes frames during playback and still ignores queries. The cause is unknown.
+  - no frame after the other subscriptions, including 15 of 19 probe rounds triggered by real playback and every session without audio.
+- No reply to any host query: about ten manual sessions (idle, silence, playing, after a power cycle), `C9` and `C6` sent right after a `C3` push, and 19 automatic rounds of `D8 66 61 C6 B1` and `ED 13` sent right after subscribing during playback.
+- Why those sessions got no replies while `edifierctl` does is not known.
 
 ## BlueZ notes
 
