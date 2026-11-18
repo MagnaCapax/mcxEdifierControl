@@ -39,12 +39,17 @@ jobs:
             CFLAGS="-O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all" \
             LDFLAGS="-fsanitize=address,undefined"
 
-      - name: Binary links only libdbus and libc
+      - name: Direct libraries are only libdbus and libc
+        # ldd also lists what libdbus itself pulls in (libsystemd on Ubuntu);
+        # the NEEDED entries are what this binary links.
         run: |
           make clean && make CC=${{ matrix.cc }}
           ./edifierctl -V
           ./edifierctl -h > /dev/null
-          ldd edifierctl
+          readelf -d edifierctl | grep NEEDED
+          test "$(readelf -d edifierctl | grep -c NEEDED)" -eq 2
+          readelf -d edifierctl | grep NEEDED | grep -q 'libdbus-1'
+          readelf -d edifierctl | grep NEEDED | grep -q 'libc\.so'
 
   other-distros:
     # "Any Linux box": a Debian stable glibc distribution and a musl one.
