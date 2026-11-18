@@ -83,7 +83,7 @@ Tested with `edifierctl` on one R2750DB MKII, firmware 2.5.1, BlueZ 5.85, on 202
 | GATT layout (control service, RX notify, TX write) | verified on the unit |
 | Frame format and checksum | verified on the unit |
 | `volume` read (`66`) and set (`67`), relative and absolute | verified on the unit: read, set one step down, set back, read back |
-| Queries `caps volume input eco timer multipoint eq sound firmware mac name a2dp` | verified on the unit: each answered |
+| Queries `caps volume input eco timer multipoint eq sound firmware mac name a2dp` | answered on the unit; reply sizes, and the `eq` reply that is shorter than the app layout, are in [PROTOCOL.md](docs/PROTOCOL.md#commands) |
 | Queries `autooff ldac subout` | no reply on the unit (firmware 2.5.1) |
 | Sets `input eco autooff timer timer-cancel ldac multipoint eq sound subout` | **derived from the app, not verified on hardware** |
 | Pushes `C3` (A2DP state), `66` (after a volume set), `01` / `02` (now playing) | seen on the unit |
