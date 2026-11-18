@@ -40,7 +40,7 @@ sum8 = (sum of all preceding bytes) & 0xFF
 app  = EC (default) or ED (the sub-out commands)
 ```
 
-- **unit:** the format and checksum hold for every frame the speaker sent. Example, the A2DP-state push `BB EC C3 00 01 0D 78`: `BB+EC+C3+00+01+0D = 0x278`, low byte `0x78`. A 61-byte frame (length field `0x0037`) checks out the same way.
+- **unit:** the format and checksum hold for the frames the speaker sent; in one `edifierctl` run one frame failed the checksum, origin not yet known ([observed behaviour](#observed-behaviour)). Example, the A2DP-state push `BB EC C3 00 01 0D 78`: `BB+EC+C3+00+01+0D = 0x278`, low byte `0x78`. A 61-byte frame (length field `0x0037`) checks out the same way.
 - **app:** `CC` is also accepted as a reply header.
 - **app:** the app's first frame after connecting is `AA EC D8 00 00 6E` (capability query). There is no handshake or authentication before it. The app writes with write without response, requests an MTU of 300, the 2M PHY and high connection priority, and never sends `BB` frames (it does not acknowledge pushes).
 
