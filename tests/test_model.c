@@ -1,6 +1,7 @@
 /* Command table, send gate and the volume rule. Negative controls: a
  * destructive opcode is refused without force, firmware/bulk opcodes are
- * refused even with it, and the gate ignores the app code. */
+ * refused even with it, the gate ignores the app code, and raw cannot send
+ * the volume set. */
 #include "check.h"
 #include "model.h"
 
@@ -85,9 +86,21 @@ static void test_volume(void)
 	CHECK(!ed_volume_target(NULL, 10, 30, &v));
 }
 
+static void test_raw_reserved(void)
+{
+	const struct ed_model *m = ed_model_default();
+
+	/* raw may not send the volume set: only the volume command reads first and clamps */
+	CHECK(ed_raw_reserved(m, ED_APP_MAIN, 0x67));
+	CHECK(!ed_raw_reserved(m, ED_APP_MAIN, 0x66)); /* the query stays allowed */
+	CHECK(!ed_raw_reserved(m, ED_APP_SUB, 0x67));
+	CHECK(!ed_raw_reserved(m, ED_APP_MAIN, 0x62));
+}
+
 void test_model(void)
 {
 	test_table();
 	test_gate();
 	test_volume();
+	test_raw_reserved();
 }

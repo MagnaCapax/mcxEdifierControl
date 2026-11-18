@@ -28,7 +28,7 @@ Model number EDF100102. Each row names its source. "Unit" means observed on one 
 
 | Item | Value | Source |
 |---|---|---|
-| SoC vendor | JieLi (杰理, Zhuhai Jieli Technology): the chip carries the JieLi logo | [Giteki internal photos][photos] |
+| SoC vendor | JieLi (杰理): the chip carries the JieLi logo | [Giteki internal photos][photos] |
 | Chip marking | `JL7034A6` (second line `BP2911GTLC`) | [Giteki internal photos][photos] |
 | Module | Bluetooth board silkscreened `A-JL7034A-01 V0.2`, dated `20250620`, with a printed PCB antenna | [Giteki internal photos][photos] |
 | Classic Bluetooth service name | `JL_A2DP` in the SDP record, consistent with a JieLi SDK | unit |

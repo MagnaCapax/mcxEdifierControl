@@ -1,5 +1,6 @@
 /* Frame build, checksum and reassembly, including the negative controls:
- * a frame with a wrong checksum is rejected and parsing recovers after it. */
+ * a frame with a wrong checksum is rejected and parsing recovers after it,
+ * and a stray header with a bogus length does not stall the parser. */
 #include <stdlib.h>
 #include <string.h>
 
@@ -137,6 +138,25 @@ static void test_parse_overflow(void)
 	free(p);
 }
 
+static void test_parse_stall_resync(void)
+{
+	struct ed_parser *p = new_parser();
+	struct ed_frame f;
+	/* A stray reply header with a huge length, then a valid frame: the parser
+	 * must not wait for 64 KiB that never comes, it skips to the valid frame. */
+	uint8_t stall[5 + sizeof(seen_c3)] = {0xBB, 0xEC, 0x01, 0xFF, 0xFF};
+
+	memcpy(stall + 5, seen_c3, sizeof(seen_c3));
+	ed_parser_feed(p, stall, sizeof(stall));
+	CHECK(ed_parser_next(p, &f) && f.cmd == 0xC3 && f.payload[0] == 0x0D);
+	CHECK(p->skipped == 5);
+	CHECK(!ed_parser_next(p, &f));
+	/* negative control: an incomplete frame with nothing valid behind it waits */
+	ed_parser_feed(p, stall, 5);
+	CHECK(!ed_parser_next(p, &f) && p->used == 5);
+	free(p);
+}
+
 void test_frame(void)
 {
 	test_checksum_and_build();
@@ -145,4 +165,5 @@ void test_frame(void)
 	test_parse_bad_checksum();
 	test_parse_sizes();
 	test_parse_overflow();
+	test_parse_stall_resync();
 }

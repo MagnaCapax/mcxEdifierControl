@@ -47,14 +47,14 @@ jobs:
           ldd edifierctl
 
   other-distros:
-    # "Any Linux box": an older glibc distribution and a musl one.
+    # "Any Linux box": a Debian stable glibc distribution and a musl one.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         include:
-          - image: debian:bullseye
+          - image: debian:bookworm
             setup: apt-get update && apt-get install -y --no-install-recommends gcc make libc6-dev libdbus-1-dev pkg-config
           - image: alpine:3.20
             setup: apk add --no-cache gcc make musl-dev dbus-dev pkgconf

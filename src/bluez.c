@@ -202,8 +202,10 @@ static int locate(DBusConnection *bus, struct survey *s, char *err, size_t errca
 			return -1;
 		while (s->matches == 0 && now_ms() < deadline && !ed_link_stop) {
 			sleep_ms(POLL_STEP_MS * 2);
-			if (survey_run(bus, s, err, errcap) < 0)
-				break;
+			if (survey_run(bus, s, err, errcap) < 0) {
+				discovery_stop(bus, s);
+				return -1; /* keep the D-Bus error, not "not found" */
+			}
 		}
 		discovery_stop(bus, s);
 	}
@@ -256,11 +258,18 @@ static int open_channel(struct ed_link *l, struct survey *s, char *err, size_t e
 
 	if (!s->connected) {
 		fprintf(stderr, "edifierctl: connecting to %s\n", s->found_addr);
-		if (ed_dbus_call_void(l->bus, l->device, "org.bluez.Device1", "Connect", CONNECT_MS,
-				      err, errcap) < 0 &&
-		    !ed_dbus_err_is(err, "AlreadyConnected"))
+		int rc = ed_dbus_call_void(l->bus, l->device, "org.bluez.Device1", "Connect", CONNECT_MS,
+					   err, errcap);
+
+		/* AlreadyConnected: someone else made the link, so it is not ours to drop.
+		 * Any other outcome, a timeout included, may leave a link we started:
+		 * own it, so closing disconnects it (harmless if it never came up). */
+		if (rc < 0 && ed_dbus_err_is(err, "AlreadyConnected"))
+			rc = 0;
+		else
+			l->we_connected = true;
+		if (rc < 0)
 			return -1;
-		l->we_connected = true;
 	}
 	deadline = now_ms() + RESOLVE_MS;
 	while (!ed_link_stop && now_ms() < deadline) {
@@ -404,9 +413,12 @@ int ed_scan(const struct ed_model *m, ed_scan_cb cb, void *ctx, char *err, size_
 
 	if (bus == NULL)
 		return -1;
-	if (survey_run(bus, &st.s, err, errcap) < 0 || st.s.adapter[0] == '\0' || !st.s.powered) {
-		if (st.s.adapter[0] == '\0' || !st.s.powered)
-			snprintf(err, errcap, "no powered Bluetooth adapter found");
+	if (survey_run(bus, &st.s, err, errcap) < 0) {
+		bus_close(bus);
+		return -1;
+	}
+	if (st.s.adapter[0] == '\0' || !st.s.powered) {
+		snprintf(err, errcap, "no powered Bluetooth adapter found");
 		bus_close(bus);
 		return -1;
 	}

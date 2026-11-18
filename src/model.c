@@ -138,3 +138,10 @@ bool ed_volume_target(const char *arg, unsigned current, unsigned max, unsigned 
 	*out = (unsigned)target;
 	return true;
 }
+
+bool ed_raw_reserved(const struct ed_model *m, uint8_t app, uint8_t op)
+{
+	const struct ed_cmd *vol = ed_cmd_find(m, "volume");
+
+	return vol != NULL && vol->app == app && vol->set == op;
+}

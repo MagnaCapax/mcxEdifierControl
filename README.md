@@ -1,6 +1,6 @@
 # mcxEdifierControl
 
-`edifierctl` is a small command-line tool that talks to an **Edifier R2750DB MKII** powered speaker over Bluetooth LE from Linux. It is meant for the speaker's own master volume, input source and ECO mode, and for watching what the speaker reports. One C binary, libdbus as its only dependency, BlueZ doing the radio work.
+`edifierctl` is a small command-line tool that talks to an **Edifier R2750DB MKII** powered speaker over Bluetooth LE from Linux. It is meant for the speaker's own master volume, input source and ECO mode, and for watching what the speaker reports. One C binary that depends directly only on libc and libdbus, with BlueZ doing the radio work.
 
 > **Status: unverified on hardware.** The frame format and the BLE layout are confirmed on a real unit, but the speaker has not yet answered a query. Every command layout comes from analysis of the official app and is untested. The [verification table](#verification-status) shows the state per command.
 
@@ -10,7 +10,7 @@ The R2750DB MKII has no absolute volume over Bluetooth: its manual says "Volume 
 
 ## Compatibility
 
-- Linux with BlueZ running (`bluetoothd`), on any distribution: CI builds and tests on Ubuntu (gcc and clang), Debian 11 and Alpine (musl).
+- Linux with BlueZ running (`bluetoothd`), on any distribution: CI builds and tests on Ubuntu (gcc and clang), Debian 12 and Alpine (musl).
 - BlueZ's GATT client must offer `AcquireNotify` and `AcquireWrite`. They were added in BlueZ 5.46, first as experimental; the current BlueZ documentation lists them without that tag.
 - A Bluetooth adapter with LE support, powered on.
 - Only the R2750DB MKII is described. Other Edifier devices use the same frame family, but their commands are not in this tool and it does not claim to work with them.
@@ -28,7 +28,7 @@ make test                       # hermetic unit tests, no Bluetooth needed
 sudo make install               # /usr/local/bin/edifierctl (PREFIX=... to change)
 ```
 
-The binary links only libc and libdbus. It writes no files.
+The binary links directly only libc and libdbus. It writes no files.
 
 ## Usage
 
@@ -57,7 +57,9 @@ edifierctl [-a ADDRESS] [-t SECONDS] [-v] [-f] COMMAND [ARGS]
 
 Exit status: 0 success, 1 no reply or link failure, 2 usage error or refused by the gate. Results go to standard output; progress and errors go to standard error.
 
-The speaker's BLE address differs from its classic Bluetooth address (on the unit observed, in one byte). `scan` shows the BLE one. A connect takes 10–26 s, so each command takes about that long. The tool disconnects a link it opened, so the phone app can connect again afterwards.
+Ctrl-C or SIGTERM ends a wait at its next check and the tool then disconnects cleanly. A D-Bus call already under way finishes first: a connect can take up to 60 s before it gives up.
+
+The speaker's BLE address differs from its classic Bluetooth address (on the unit observed, in one byte). `scan` shows the BLE one. A connect takes 10–26 s, so each command takes about that long. On exit the tool disconnects a link it opened and leaves alone a link that something else opened.
 
 ## Safety
 
@@ -96,6 +98,7 @@ src/model.c     the R2750DB MKII table, the send gate, the volume rule (pure)
 src/decode.c    reply decoding and hex parsing (pure)
 src/dbus.c      libdbus helpers
 src/bluez.c     find, connect, acquire, read, write, disconnect
+src/session.c   one link per run: the gate, draining, request and reply
 src/commands.c  the commands
 src/main.c      options and dispatch
 tests/          hermetic tests of the pure modules
@@ -109,7 +112,7 @@ The repository is `mcxEdifierControl`; the program it builds is `edifierctl`. [A
 
 ## Contributing
 
-Read [AGENTS.md](AGENTS.md) and the [ADRs](docs/adr/). The build uses `-Wall -Wextra -Wpedantic -Wshadow -Wformat=2 -Wconversion -Wsign-conversion -Werror`; CI also runs the tests under AddressSanitizer and UndefinedBehaviorSanitizer and builds on Debian 11 and Alpine. A change to behaviour comes with its test and, when significant, an ADR.
+Read [AGENTS.md](AGENTS.md) and the [ADRs](docs/adr/). The build uses `-Wall -Wextra -Wpedantic -Wshadow -Wformat=2 -Wconversion -Wsign-conversion -Werror`; CI also runs the tests under AddressSanitizer and UndefinedBehaviorSanitizer and builds on Debian 12 and Alpine. A change to behaviour comes with its test and, when significant, an ADR.
 
 ## Attribution
 

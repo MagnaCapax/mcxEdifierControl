@@ -13,7 +13,7 @@ KISS, DRY, YAGNI. Delete first: question the requirement, delete the part, simpl
 - **License:** Apache-2.0. No per-file headers; LICENSE and NOTICE cover the project.
 - **Dependencies:** libc and libdbus only. No GLib, no libsystemd, no libbluetooth. POSIX 2008 interfaces only, so the build works on glibc and musl.
 - **Warnings are errors** with the flags in the Makefile, on gcc and clang. Do not weaken them; fix the code.
-- **Pure and impure stay apart.** `frame.c`, `model.c` and `decode.c` do no I/O and are what the tests link. D-Bus and sockets live in `dbus.c` and `bluez.c`; `commands.c` ties them together.
+- **Pure and impure stay apart.** `frame.c`, `model.c` and `decode.c` do no I/O and are what the tests link. D-Bus and sockets live in `dbus.c` and `bluez.c`; `session.c` runs the one link per run (gate, draining, request and reply); `commands.c` holds the commands.
 - **Tests are hermetic:** no Bluetooth, no D-Bus, no network, no files written. Every behaviour change comes with a test, including a negative control where one makes sense (a frame with a bad checksum is rejected; a destructive opcode is refused without `-f`; a firmware opcode is refused even with it).
 - **The send gate is not negotiable** ([ADR 0003](docs/adr/0003-send-gate-volume-rule-and-quiet-logging.md)): firmware-update and bulk-transfer opcodes are never sent; destructive opcodes only with `-f`; anything else only if it is in the model's table. No firmware-update code, no opcode sweeps, no fuzzing against a device.
 - **Volume:** every change starts from a fresh read and is clamped to the reported maximum.

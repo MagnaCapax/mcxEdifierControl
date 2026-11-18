@@ -7,7 +7,7 @@ In force since: this change
 Proposed
 
 ## Context
-The tool must be small, have few dependencies and build on any Linux system with BlueZ. Talking to a BLE device on Linux means either going through bluetoothd (D-Bus) or opening an L2CAP ATT socket directly. A direct socket needs the LE address up front and raw HCI access to scan, and it runs alongside bluetoothd's own GATT client on the same connection. BlueZ also ties a discovery session and a notification session to the D-Bus client that started it, so a short-lived helper such as `busctl` cannot keep notifications open.
+The tool must be small, have few dependencies and build on any Linux system with BlueZ. Talking to a BLE device on Linux means either going through bluetoothd (D-Bus) or opening an L2CAP ATT socket directly. A direct socket needs the LE address up front and raw HCI access to scan, and how it would interact with bluetoothd, which runs its own GATT client on the same link, is untested here. BlueZ also ties a discovery session and a notification session to the D-Bus client that started it, so a short-lived helper such as `busctl` cannot keep notifications open.
 
 ## Options considered
 - C11 with libdbus: libdbus is the reference D-Bus library and bluetoothd itself links it, so it is present wherever BlueZ runs. Marshalling is verbose but contained in `src/dbus.c`.
@@ -25,7 +25,7 @@ One command per run, no daemon. `monitor` keeps a connection open for as long as
 - Runtime dependencies: libc, libdbus and a running bluetoothd whose GATT client offers `AcquireNotify`/`AcquireWrite`. They were added in BlueZ 5.46 as experimental and appear without that tag in the current BlueZ documentation.
 - Each command pays the connect time. If volume keys need low latency later, a persistent mode is a new ADR.
 - If another program already holds the RX notifications (a running `bluetoothctl` with notify on, for example), `AcquireNotify` fails and the tool says so.
-- The tool disconnects only a connection it made, so the phone app can connect afterwards.
+- The tool disconnects only a connection it made; a connection something else made is left alone.
 
 ## References
 `src/dbus.c`, `src/bluez.c`, BlueZ `doc/org.bluez.GattCharacteristic.rst` (AcquireWrite, AcquireNotify), BlueZ `src/gatt-client.c` (writes from the acquired socket go out with `bt_gatt_client_write_without_response`), BlueZ `ChangeLog` (5.46).

@@ -74,6 +74,18 @@ static bool is_reply_header(uint8_t b)
 	return b == ED_HDR_REPLY || b == ED_HDR_REPLY_ALT;
 }
 
+/* True when a complete frame with a valid checksum starts at offset i. */
+static bool valid_frame_at(const struct ed_parser *p, size_t i)
+{
+	size_t len, total;
+
+	if (!is_reply_header(p->buf[i]) || p->used - i < ED_FRAME_OVERHEAD)
+		return false;
+	len = ((size_t)p->buf[i + 3] << 8) | p->buf[i + 4];
+	total = len + ED_FRAME_OVERHEAD;
+	return p->used - i >= total && ed_sum8(p->buf + i, total - 1) == p->buf[i + total - 1];
+}
+
 bool ed_parser_next(struct ed_parser *p, struct ed_frame *f)
 {
 	release_pending(p);
@@ -90,8 +102,20 @@ bool ed_parser_next(struct ed_parser *p, struct ed_frame *f)
 		size_t len = ((size_t)p->buf[3] << 8) | p->buf[4];
 		size_t total = len + ED_FRAME_OVERHEAD;
 
-		if (p->used < total)
-			return false;
+		if (p->used < total) {
+			/* Still incomplete. If a valid frame is already buffered behind it, the
+			 * header byte was garbage with a bogus length: skip to that frame
+			 * instead of waiting for up to 64 KiB that will never come. */
+			size_t next = 1;
+
+			while (next < p->used && !valid_frame_at(p, next))
+				next++;
+			if (next == p->used)
+				return false;
+			p->skipped += next;
+			drop_front(p, next);
+			continue;
+		}
 		if (ed_sum8(p->buf, total - 1) != p->buf[total - 1]) {
 			/* A header byte inside garbage or a corrupt frame: skip one byte and
 			 * search again, so a valid frame later in the buffer is still found. */

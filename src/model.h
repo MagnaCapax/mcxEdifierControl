@@ -49,6 +49,9 @@ const struct ed_cmd *ed_cmd_by_opcode(const struct ed_model *m, uint8_t app, uin
 enum ed_gate ed_gate_check(const struct ed_model *m, uint8_t app, uint8_t op);
 bool ed_gate_allows(enum ed_gate g, bool force);
 const char *ed_gate_reason(enum ed_gate g);
+/* True for set opcodes that only their own command may send, because that
+ * command applies a safety rule raw cannot: the volume set (read, then clamp). */
+bool ed_raw_reserved(const struct ed_model *m, uint8_t app, uint8_t op);
 
 /* Volume target for "N", "+N" or "-N" given a fresh read of [max, current].
  * The result is clamped to 0..max. Returns false for a malformed argument or

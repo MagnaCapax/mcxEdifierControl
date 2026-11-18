@@ -11,7 +11,7 @@ DBUS_CFLAGS = $(shell $(PKG_CONFIG) --cflags dbus-1)
 DBUS_LIBS = $(shell $(PKG_CONFIG) --libs dbus-1)
 
 CORE = src/frame.c src/model.c src/decode.c
-APP = src/dbus.c src/bluez.c src/commands.c src/main.c
+APP = src/dbus.c src/bluez.c src/session.c src/commands.c src/main.c
 TESTS = tests/run.c tests/test_frame.c tests/test_model.c tests/test_decode.c
 
 all: edifierctl

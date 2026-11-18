@@ -125,6 +125,10 @@ int main(int argc, char **argv)
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
+	/* A write to a link BlueZ already closed must fail with EPIPE, not kill us
+	 * before we can report it and disconnect. */
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
 
 	if (strcmp(cmd, "scan") == 0 && nargs == 0)
 		return ed_cmd_scan(&o);

@@ -40,6 +40,8 @@ int ed_dbus_call_void(DBusConnection *bus, const char *path, const char *iface,
 
 bool ed_dbus_err_is(const char *err, const char *suffix)
 {
+	/* err looks like "org.bluez.Error.AlreadyConnected: ..."; matching ".Name:"
+	 * keeps "Failed" from matching "org.bluez.Error.FailedX". */
 	char needle[96];
 
 	snprintf(needle, sizeof(needle), ".%s:", suffix);
@@ -160,6 +162,8 @@ int ed_dbus_walk(DBusConnection *bus, ed_object_cb cb, void *ctx, char *err, siz
 	DBusMessage *msg = dbus_message_new_method_call(ED_BLUEZ, "/",
 							"org.freedesktop.DBus.ObjectManager",
 							"GetManagedObjects");
+	/* One snapshot of everything BlueZ exports. The callers poll this instead of
+	 * subscribing to InterfacesAdded/PropertiesChanged (ADR 0002). */
 	DBusMessage *reply = ed_dbus_call(bus, msg, DBUS_TIMEOUT_USE_DEFAULT, err, errcap);
 	DBusMessageIter top, objects;
 
@@ -193,6 +197,8 @@ int ed_dbus_walk(DBusConnection *bus, ed_object_cb cb, void *ctx, char *err, siz
 	return 0;
 }
 
+/* The builders below ignore libdbus's return values, which report only
+ * out-of-memory; the arguments are a few short strings. */
 void ed_dict_open(DBusMessageIter *args, DBusMessageIter *dict)
 {
 	dbus_message_iter_open_container(args, DBUS_TYPE_ARRAY, "{sv}", dict);
