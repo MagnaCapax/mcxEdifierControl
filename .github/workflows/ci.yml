@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    # Build with strict warnings as errors, run the hermetic tests, then run
+    # them again under AddressSanitizer and UndefinedBehaviorSanitizer.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [ gcc, clang ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install libdbus headers
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libdbus-1-dev pkg-config
+
+      - name: Build
+        run: make CC=${{ matrix.cc }}
+
+      - name: Tests
+        run: make test CC=${{ matrix.cc }}
+
+      - name: Tests under ASan and UBSan
+        run: |
+          make clean
+          make test CC=${{ matrix.cc }} \
+            CFLAGS="-O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all" \
+            LDFLAGS="-fsanitize=address,undefined"
+
+      - name: Binary links only libdbus and libc
+        run: |
+          make clean && make CC=${{ matrix.cc }}
+          ./edifierctl -V
+          ./edifierctl -h > /dev/null
+          ldd edifierctl
+
+  other-distros:
+    # "Any Linux box": an older glibc distribution and a musl one.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: debian:bullseye
+            setup: apt-get update && apt-get install -y --no-install-recommends gcc make libc6-dev libdbus-1-dev pkg-config
+          - image: alpine:3.20
+            setup: apk add --no-cache gcc make musl-dev dbus-dev pkgconf
+    container: ${{ matrix.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Toolchain
+        run: ${{ matrix.setup }}
+
+      - name: Build and test
+        run: make && make test && ./edifierctl -V
